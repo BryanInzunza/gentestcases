@@ -1,25 +1,25 @@
 #!/bin/bash
 
-# Check if bito is installed
-if ! command -v bito &> /dev/null; then
-    echo '{"error": "bito could not be found. Please install it and try again."}'
+# Verificar que bito esté instalado
+if ! command -v bito > /dev/null 2>&1; then
+    echo '{"error": "No se encontró bito. Por favor instálalo y vuelve a intentarlo."}'
     exit 1
 fi
 
-# Check if the file to process is provided
+# Verificar que se proporcionen los argumentos necesarios
 if [ "$#" -lt 2 ]; then
-    echo '{"error": "Usage: ./script.sh <file_to_process> <output_dir>"}'
+    echo '{"error": "Uso: ./script.sh <archivo_a_procesar> <directorio_de_salida>"}'
     exit 1
 fi
 
-# File to process
+# Archivo a procesar y directorio de salida
 inputfile_for_ut_gen="$1"
 output_dir="$2"
 
-# Create the output directory if it doesn't exist
+# Crear el directorio de salida si no existe
 mkdir -p "$output_dir"
 
-# List of files and directories to ignore
+# Lista de archivos y directorios a ignorar
 ignore_list=(
     ".git"
     ".gitignore"
@@ -42,7 +42,7 @@ ignore_list=(
     "x86"
 )
 
-# List of file extensions to ignore
+# Lista de extensiones de archivo a ignorar
 ignore_extensions=(
     ".md"
     ".json"
@@ -60,66 +60,67 @@ ignore_extensions=(
     "modernzr.js"
 )
 
-# Check if the file or directory is in the ignore list
+# Verificar si el archivo o directorio está en la lista de ignorados
 for ignore_item in "${ignore_list[@]}"; do
     if [[ "$inputfile_for_ut_gen" == *"$ignore_item"* ]]; then
-        echo "{\"status\": \"skipped\", \"reason\": \"Ignored file or directory: $inputfile_for_ut_gen\"}"
+        echo "{\"status\": \"omitido\", \"reason\": \"Archivo o directorio ignorado: $inputfile_for_ut_gen\"}"
         exit 0
     fi
 done
 
-# Check if the file has an ignored extension
+# Verificar si el archivo tiene una extensión ignorada
 for ext in "${ignore_extensions[@]}"; do
     if [[ "$inputfile_for_ut_gen" == *"$ext" ]]; then
-        echo "{\"status\": \"skipped\", \"reason\": \"File with ignored extension ($ext): $inputfile_for_ut_gen\"}"
+        echo "{\"status\": \"omitido\", \"reason\": \"Archivo con extensión ignorada ($ext): $inputfile_for_ut_gen\"}"
         exit 0
     fi
 done
 
-# Check if the file exists
+# Verificar que el archivo exista
 if [ ! -f "$inputfile_for_ut_gen" ]; then
-    echo "{\"error\": \"File does not exist: $inputfile_for_ut_gen\"}"
+    echo "{\"error\": \"El archivo no existe: $inputfile_for_ut_gen\"}"
     exit 1
 fi
 
-# Framework to use for testing
+# Framework a utilizar para las pruebas
 framework="PHPUnit"
 
-# Read the prompts into variables
+# Leer las plantillas de pregunta en variables
 prompt=$(<prompts/gen_test_case_1.pmt)
 prompt2=$(<prompts/gen_test_case_2.pmt)
 
-# Extract the filename without the extension
+# Extraer el nombre del archivo sin extensión y su extensión original
 filename=$(basename -- "$inputfile_for_ut_gen")
 extension="${filename##*.}"
 filename="${filename%.*}"
 
-# Replace the placeholders in the prompt with the user's input and filename
+# Reemplazar los placeholders en la plantilla con el framework y nombre del archivo
 prompt_instance=${prompt/\$framework/${framework}}
 prompt_instance=${prompt_instance/\$filename/${filename}.${extension}}
 
-# Create a temporary file and write the modified prompt to it
+# Crear un archivo temporal para la plantilla modificada
 temp_prompt=$(mktemp --suffix=".pmt")
 trap "rm -f $temp_prompt" EXIT
 echo "$prompt_instance" > "$temp_prompt"
 
-# Prepare output files
+# Preparar los archivos de salida: el archivo de prueba y el log JSON
 output_file="$output_dir/${filename}_test.php"
 log_file="$output_dir/${filename}_test.json"
 
-# Start logging
-start_time=$(date +"%Y-%m-%d %H:%M:%S")
-log_data="{\"file\": \"$inputfile_for_ut_gen\", \"start_time\": \"$start_time\", \"retries\": [], \"success\": false}"
+# Iniciar registro
+start_time_fmt=$(date +"%d/%m/%Y %H:%M:%S")
+start_epoch=$(date +%s)
+log_data="{\"file\": \"$inputfile_for_ut_gen\", \"start_time\": \"$start_time_fmt\", \"retries\": [], \"success\": false}"
 
-# Maximum number of retries for processing
+# Número máximo de reintentos para el procesamiento
 MAX_RETRIES=3
 retries=0
 success=false
 
 while [ $retries -lt $MAX_RETRIES ]; do
-    # Run the bito command with the first prompt
+    # Ejecutar el comando bito con la primera plantilla
     if ! bito --agent gentestcase -p "$temp_prompt" -f "$inputfile_for_ut_gen" -c "context.txt" > /dev/null; then
-        log_data=$(echo "$log_data" | jq --arg retry "$retries" --arg error "The bito command failed. Retrying..." '.retries += [{"attempt": $retry, "error": $error}]')
+        log_data=$(echo "$log_data" | jq --arg retry "$retries" --arg error "El comando bito falló. Reintentando..." '.retries += [{"attempt": $retry, "error": $error}]')
         retries=$((retries+1))
         sleep 2
         continue
@@ -127,44 +128,47 @@ while [ $retries -lt $MAX_RETRIES ]; do
 
     echo "$prompt2" > "$temp_prompt"
 
-    # Run the bito command with the second prompt and store the output
+    # Ejecutar el comando bito con la segunda plantilla y guardar la salida
     if ! bito --agent gentestcase -p "$temp_prompt" -f "$inputfile_for_ut_gen" -c "context.txt" > "$output_file"; then
-        log_data=$(echo "$log_data" | jq --arg retry "$retries" --arg error "The bito command failed. Retrying..." '.retries += [{"attempt": $retry, "error": $error}]')
+        log_data=$(echo "$log_data" | jq --arg retry "$retries" --arg error "El comando bito falló. Reintentando..." '.retries += [{"attempt": $retry, "error": $error}]')
         retries=$((retries+1))
         sleep 2
         continue
     fi
 
-    # Verify the output file exists and is not empty
+    # Verificar que el archivo de salida exista y no esté vacío
     if [ -s "$output_file" ]; then
         log_data=$(echo "$log_data" | jq '.success = true')
         success=true
         break
     else
-        log_data=$(echo "$log_data" | jq --arg retry "$retries" --arg error "Test file was not generated. Retrying..." '.retries += [{"attempt": $retry, "error": $error}]')
+        log_data=$(echo "$log_data" | jq --arg retry "$retries" --arg error "El archivo de prueba no se generó. Reintentando..." '.retries += [{"attempt": $retry, "error": $error}]')
         retries=$((retries+1))
         sleep 2
     fi
 done
 
 if [ "$success" = false ]; then
-    log_data=$(echo "$log_data" | jq '.error = "Failed to generate test file after maximum retries."')
+    log_data=$(echo "$log_data" | jq '.error = "No se pudo generar el archivo de prueba después del número máximo de reintentos."')
     echo "$log_data" > "$log_file"
+    echo "$log_data"
     exit 1
 fi
 
-# Calculate execution time
-end_time=$(date +"%Y-%m-%d %H:%M:%S")
-execution_time=$(( $(date +%s) - $(date +%s -d "$start_time") ))
-log_data=$(echo "$log_data" | jq --arg end_time "$end_time" --argjson execution_time "$execution_time" '. + {"end_time": $end_time, "execution_time": $execution_time}')
+# Calcular tiempo de ejecución usando epochs
+end_epoch=$(date +%s)
+end_time_fmt=$(date +"%d/%m/%Y %H:%M:%S")
+execution_time=$(( end_epoch - start_epoch ))
+log_data=$(echo "$log_data" | jq --arg end_time "$end_time_fmt" --argjson execution_time "$execution_time" '. + {"end_time": $end_time, "execution_time": $execution_time}')
 
-# Count characters in the original file
+# Contar caracteres en el archivo original
 char_count=$(wc -m < "$inputfile_for_ut_gen")
 log_data=$(echo "$log_data" | jq --argjson char_count "$char_count" '. + {"char_count": $char_count}')
 
-# Run extract_code.sh on the output file
+# Ejecutar extract_code.sh sobre el archivo de salida
 extract_output=$(./extract_code.sh "$output_file" 2>&1)
 log_data=$(echo "$log_data" | jq --arg extract_output "$extract_output" '. + {"extract_code_output": $extract_output}')
 
-# Write the log data to the log file
+# Guardar el registro (log) en el archivo JSON y mostrarlo en STDOUT
 echo "$log_data" > "$log_file"
+echo "$log_data"

@@ -1,18 +1,22 @@
 #!/bin/bash
 
 if [ "$#" -ne 1 ]; then
-    echo "Usage: $0 <source_file>"
+    echo "Uso: $0 <archivo_fuente>"
     exit 1
 fi
 
 if [ ! -f "$1" ]; then
-    echo "Error: File $1 not found."
+    echo "Error: No se encontró el archivo $1."
     exit 1
 fi
 
-# Extracting the filename without the extension
+# Extraer el nombre del archivo sin la extensión
 filename=$(basename -- "$1")
 filename_no_ext="${filename%.*}"
+
+# Definir el directorio de salida basándose en el directorio del archivo fuente
+output_dir=$(dirname "$1")
+mkdir -p "$output_dir"
 
 in_code_block=false
 block_content=""
@@ -32,22 +36,17 @@ go_counter=0
 while IFS= read -r line; do
     if [[ $line == \`\`\`* ]]; then
         if $in_code_block; then
-            # End of a code block
+            # Fin de un bloque de código
             in_code_block=false
 
-            # Determine file extension based on language and increment counter
+            # Determinar la extensión del archivo según el lenguaje e incrementar el contador
             case "$block_lang" in
                 python)
                     ext=".py"
                     ((python_counter++))
                     counter=$python_counter
                     ;;
-                javascript)
-                    ext=".js"
-                    ((javascript_counter++))
-                    counter=$javascript_counter
-                    ;;
-                js)
+                javascript|js)
                     ext=".js"
                     ((javascript_counter++))
                     counter=$javascript_counter
@@ -94,16 +93,16 @@ while IFS= read -r line; do
                     ;;
             esac
 
-            # Construct the filename using the source file's name, language, and counter
-            output_file="test_case_${filename_no_ext}_${counter}$ext"
+            # Construir el nombre del archivo usando el nombre original, el lenguaje y el contador
+            output_file="$output_dir/test_case_${filename_no_ext}_${counter}${ext}"
 
-            # Save content to file
+            # Guardar el contenido en el archivo
             echo "$block_content" > "$output_file"
             block_content=""
             block_lang=""
-            echo "Code saved in: $output_file"
+            echo "Código guardado en: $output_file"
         else
-            # Start of a code block
+            # Inicio de un bloque de código
             in_code_block=true
             block_lang="${line#\`\`\`}"
         fi
