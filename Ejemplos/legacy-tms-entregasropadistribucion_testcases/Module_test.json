@@ -1,0 +1,10 @@
+{
+  "file": "Ejemplos/legacy-tms-entregasropadistribucion/Module.php",
+  "start_time": "2025-04-16 11:56:21",
+  "retries": [],
+  "success": true,
+  "end_time": "2025-04-16 11:57:28",
+  "execution_time": 67,
+  "char_count": 2180,
+  "extract_code_output": "Code saved in: test_case_Module_test_1.php"
+}

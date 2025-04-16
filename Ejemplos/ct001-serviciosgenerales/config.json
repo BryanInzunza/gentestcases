@@ -1,0 +1,31 @@
+{
+    "dbTecnologia": {
+        "host": "",
+        "dbTecnologia": "",
+        "dbGlobal": "",
+        "username": "",
+        "password": ""
+    },
+    "dbPersonal": {
+        "dbname": "",
+        "username": "",
+        "password": ""
+    },
+    "dbMueblesSql": {
+        "dbname": "",
+        "username": "",
+        "password": ""
+    },
+    "dbMuebles": {
+        "username": "",
+        "password": ""
+    },
+    "cnfgHuellas": {
+        "url": "https://seguridad-test.coppel.io:50086/api/v1/comparaciones",
+        "sistemaOrigen": "DesarrolloBodegaRopa",
+        "tipoOperacion": "StaffHuellaTemplate",
+        "idOperacion": 106
+    },
+    "auth": "http://sso.coppel.com:50060/api/v1/verify",
+    "authDev": "http://devsso.coppel.com/api/v1/verify"
+}
