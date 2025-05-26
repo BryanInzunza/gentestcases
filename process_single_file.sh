@@ -121,8 +121,5 @@ log_data=$(echo "$log_data" | jq --arg end_time "$end_time_fmt" --argjson execut
 char_count=$(wc -m < "$inputfile_for_ut_gen")
 log_data=$(echo "$log_data" | jq --argjson char_count "$char_count" '. + {"char_count": $char_count}')
 
-extract_output=$(./extract_code.sh "$output_file" 2>&1 || true)
-log_data=$(echo "$log_data" | jq --arg extract_output "$extract_output" '. + {"extract_code_output": $extract_output}')
-
 echo "$log_data" > "$log_file"
 echo "$log_data"
