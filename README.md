@@ -1,7 +1,7 @@
 # gentestcase
 
-Sistema automatizado para generación de casos de prueba unitarios utilizando IA (Bito) sobre proyectos de código fuente.  
-Optimizado para eficiencia, extensibilidad y fácil integración en flujos de trabajo de desarrollo profesional.
+Sistema automatizado para la generación de casos de prueba unitarios utilizando IA (Bito) sobre proyectos de código fuente.  
+Optimizado para eficiencia, extensibilidad e integración sencilla en flujos de trabajo de desarrollo profesional.
 
 ---
 
@@ -17,7 +17,7 @@ Optimizado para eficiencia, extensibilidad y fácil integración en flujos de tr
     - [1. Filtrado de Archivos Testeables](#1-filtrado-de-archivos-testeables)
     - [2. Procesamiento en Paralelo](#2-procesamiento-en-paralelo)
     - [3. Generación de Casos de Prueba](#3-generación-de-casos-de-prueba)
-    - [4. Extracción y Almacenamiento](#4-extracción-y-almacenamiento)
+    - [4. Almacenamiento y Métricas](#4-almacenamiento-y-métricas)
   - [Uso](#uso)
   - [Resultados](#resultados)
   - [Personalización y Extensión](#personalización-y-extensión)
@@ -28,14 +28,14 @@ Optimizado para eficiencia, extensibilidad y fácil integración en flujos de tr
 
 ## Descripción General
 
-**gentestcase** es un sistema bash automatizado que permite:
+**gentestcase** es un sistema automatizado en Bash que te permite:
 
 -   Analizar un proyecto de software completo.
 -   Identificar y filtrar inteligentemente archivos relevantes para pruebas unitarias.
 -   Generar casos de prueba mediante la IA de Bito, con prompts personalizables.
--   Extraer y almacenar los resultados en un formato organizado, preparado para integración y visualización web.
+-   Almacenar los resultados en un formato organizado, preparado para integración y visualización.
 
-Ideal para integrar en pipelines, auditorías de código o acelerar la cobertura de tests en bases de código legacy o activas.
+Ideal para pipelines CI/CD, auditorías de código o acelerar la cobertura de tests en bases de código legacy o activas.
 
 ---
 
@@ -49,11 +49,11 @@ La solución se compone de scripts Bash y prompts de IA, orquestados del siguien
 2. **Procesamiento Paralelo:**  
    Los archivos identificados se procesan en paralelo, maximizando el uso de recursos del sistema.
 
-3. **Generación y Extracción de Tests:**  
-   Por cada archivo, se invoca la IA con prompts robustos para obtener casos de prueba exhaustivos, almacenando logs en formato JSON.
+3. **Generación y Almacenamiento de Tests:**  
+   Para cada archivo, se invoca la IA con prompts robustos para obtener casos de prueba, almacenando logs en formato JSON.
 
-4. **Carpeta de Salida:**  
-   Todos los resultados (test cases, logs, tiempos de ejecución) se guardan en una carpeta independiente y organizada.
+4. **Carpeta de Salida con Métricas:**  
+   Todos los resultados (test cases, logs, tiempos de ejecución, métricas globales) se guardan en una carpeta independiente y organizada.
 
 ---
 
@@ -73,7 +73,6 @@ La solución se compone de scripts Bash y prompts de IA, orquestados del siguien
 ```
 gentestcase/
 ├── context.txt
-├── extract_code.sh
 ├── filter_testable_files.sh
 ├── process_in_parallel.sh
 ├── process_single_file.sh
@@ -83,9 +82,8 @@ gentestcase/
 ```
 
 -   **context.txt**: Archivo base para contexto extra (puedes personalizarlo).
--   **extract_code.sh**: Extrae bloques de código de las respuestas de la IA.
 -   **filter_testable_files.sh**: Filtra archivos del proyecto para elegir solo los testeables.
--   **process_in_parallel.sh**: Orquestador principal, procesa todo el proyecto en paralelo.
+-   **process_in_parallel.sh**: Orquestador principal, procesa todo el proyecto en paralelo y genera reporte global.
 -   **process_single_file.sh**: Encargado de procesar cada archivo individualmente con la IA.
 -   **prompts/**: Carpeta con los prompts personalizables para Bito.
 
@@ -106,12 +104,12 @@ gentestcase/
 ### 3. Generación de Casos de Prueba
 
 -   `process_single_file.sh` llama a Bito dos veces por archivo: primero para verificar la relevancia y luego para generar los casos de prueba unitarios.
--   Maneja reintentos automáticos y logs detallados en caso de errores.
+-   Maneja reintentos automáticos y logs detallados por archivo.
 
-### 4. Extracción y Almacenamiento
+### 4. Almacenamiento y Métricas
 
--   Se extraen bloques de código relevantes de las respuestas de la IA con `extract_code.sh`.
 -   Todo el output (casos de prueba y logs en formato JSON) se almacena en una carpeta `<nombre_proyecto>_testcases`.
+-   Se genera un archivo `reporte_global.json` con métricas agregadas: total de archivos procesados, fecha/hora de ejecución, lista de archivos y tiempos globales.
 
 ---
 
@@ -133,7 +131,7 @@ gentestcase/
     ```bash
     ./process_in_parallel.sh /ruta/a/mi_proyecto
     ```
-    > El sistema generará una carpeta `/ruta/a/mi_proyecto_testcases` con los resultados.
+    > El sistema generará una carpeta `/ruta/a/mi_proyecto_testcases` con los resultados y métricas.
 
 ---
 
@@ -143,13 +141,15 @@ En la carpeta `<nombre_proyecto>_testcases` encontrarás para cada archivo proce
 
 -   Un archivo `_test.php` (o del lenguaje correspondiente) con los casos de prueba generados.
 -   Un archivo `_test.json` con el log detallado del proceso.
--   Un archivo `execution_time.log` con el tiempo total de ejecución.
+-   Un archivo `tiempo_ejecucion.log` con el tiempo total de ejecución.
+-   Un archivo `reporte_global.json` con métricas y resumen del procesamiento.
 
 Ejemplo:
 
 ```
 mi_proyecto_testcases/
-├── execution_time.log
+├── tiempo_ejecucion.log
+├── reporte_global.json
 ├── Archivo1_test.php
 ├── Archivo1_test.json
 ├── Archivo2_test.php
@@ -166,7 +166,7 @@ mi_proyecto_testcases/
 -   **Prompts de IA:**  
     Personaliza los archivos en la carpeta `prompts/` para adaptar el tono, cobertura o tipo de tests.
 -   **Paralelismo:**  
-    El script usa por defecto todos los núcleos disponibles, puedes limitarlo modificando la variable `PARALLEL_JOBS`.
+    El script usa por defecto todos los núcleos disponibles, puedes limitarlo modificando la variable que determina los hilos (`nproc`).
 
 ---
 
