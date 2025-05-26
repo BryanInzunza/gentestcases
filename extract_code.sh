@@ -10,11 +10,8 @@ if [ ! -f "$1" ]; then
     exit 1
 fi
 
-# Extraer el nombre del archivo sin la extensión
 filename=$(basename -- "$1")
 filename_no_ext="${filename%.*}"
-
-# Definir el directorio de salida basándose en el directorio del archivo fuente
 output_dir=$(dirname "$1")
 mkdir -p "$output_dir"
 
@@ -22,95 +19,36 @@ in_code_block=false
 block_content=""
 block_lang=""
 
-python_counter=0
-javascript_counter=0
-bash_counter=0
-default_counter=0
-typescript_counter=0
-csharp_counter=0
-php_counter=0
-java_counter=0
-sql_counter=0
-go_counter=0
+declare -A counters
 
 while IFS= read -r line; do
     if [[ $line == \`\`\`* ]]; then
         if $in_code_block; then
-            # Fin de un bloque de código
+            # Fin de bloque
             in_code_block=false
-
-            # Determinar la extensión del archivo según el lenguaje e incrementar el contador
+            ext=".txt"
             case "$block_lang" in
-                python)
-                    ext=".py"
-                    ((python_counter++))
-                    counter=$python_counter
-                    ;;
-                javascript|js)
-                    ext=".js"
-                    ((javascript_counter++))
-                    counter=$javascript_counter
-                    ;;
-                bash)
-                    ext=".sh"
-                    ((bash_counter++))
-                    counter=$bash_counter
-                    ;;
-                typescript)
-                    ext=".ts"
-                    ((typescript_counter++))
-                    counter=$typescript_counter
-                    ;;
-                csharp)
-                    ext=".cs"
-                    ((csharp_counter++))
-                    counter=$csharp_counter
-                    ;;
-                php)
-                    ext=".php"
-                    ((php_counter++))
-                    counter=$php_counter
-                    ;;
-                java)
-                    ext=".java"
-                    ((java_counter++))
-                    counter=$java_counter
-                    ;;
-                sql)
-                    ext=".sql"
-                    ((sql_counter++))
-                    counter=$sql_counter
-                    ;;
-                go)
-                    ext=".go"
-                    ((go_counter++))
-                    counter=$go_counter
-                    ;;
-                *)
-                    ext=".txt"
-                    ((default_counter++))
-                    counter=$default_counter
-                    ;;
+                python) ext=".py";;
+                javascript|js) ext=".js";;
+                bash) ext=".sh";;
+                typescript) ext=".ts";;
+                csharp) ext=".cs";;
+                php) ext=".php";;
+                java) ext=".java";;
+                sql) ext=".sql";;
+                go) ext=".go";;
             esac
-
-            # Construir el nombre del archivo usando el nombre original, el lenguaje y el contador
-            output_file="$output_dir/test_case_${filename_no_ext}_${counter}${ext}"
-
-            # Guardar el contenido en el archivo
+            counters["$ext"]=$((counters["$ext"]+1))
+            output_file="$output_dir/test_case_${filename_no_ext}_${counters[$ext]}$ext"
             echo "$block_content" > "$output_file"
+            echo "Código guardado en: $output_file"
             block_content=""
             block_lang=""
-            echo "Código guardado en: $output_file"
         else
-            # Inicio de un bloque de código
             in_code_block=true
             block_lang="${line#\`\`\`}"
         fi
     elif $in_code_block; then
-        if [ -z "$block_content" ]; then
-            block_content="$line"
-        else
-            block_content="$block_content"$'\n'"$line"
-        fi
+        block_content="$block_content"$'\n'"$line"
     fi
 done < "$1"
