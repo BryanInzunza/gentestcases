@@ -57,4 +57,27 @@ rm "$filtered_files_tmp"
 end_time=$(date +%s)
 execution_time=$((end_time - start_time))
 echo "Tiempo de ejecución: ${execution_time} segundos" > "$output_dir/execution_time.log"
+
+# ----- Feature: Generar reporte global unificado en JSON (en español) -----
+reporte_global="$output_dir/reporte_global.json"
+
+# Leer tiempo de ejecución global
+if [ -f "$output_dir/execution_time.log" ]; then
+    exec_time=$(cat "$output_dir/execution_time.log")
+else
+    exec_time=""
+fi
+
+# Leer todos los archivos *_test.json y unirlos en un array usando jq
+files_json=$(find "$output_dir" -type f -name "*_test.json" -exec cat {} \; | jq -s '.')
+
+# Crear el reporte_global.json
+jq -n \
+    --arg project_path "$project_folder" \
+    --arg global_execution_time "$exec_time" \
+    --argjson files "$files_json" \
+    '{project_path: $project_path, global_execution_time: $global_execution_time, files: $files}' \
+    > "$reporte_global"
+
 echo "Procesamiento completado. Casos de prueba guardados en '$output_dir'."
+echo "Reporte global generado en: $reporte_global"
